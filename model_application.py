@@ -35,8 +35,9 @@ def run_model(model, testim_path, out_path, SIZE_X, SIZE_Y):
 	test_img = cv2.resize(start_img, (SIZE_X, SIZE_Y))
 	test_img = np.expand_dims(test_img, axis=0)
 
+
 	prediction = model.predict(test_img)
-	
+
     #View and Save segmented image
 	
 	prediction_image = prediction.reshape((test_img.shape[1], test_img.shape[2]))
@@ -58,7 +59,7 @@ def model_on_patches(SIZE_X, SIZE_Y, block_results_folder):
 	out_path = f"{block_results_folder}patches_results/"
 	patches_folder = f"{block_results_folder}patches/"
 
-	model = keras.models.load_model(f"model/cloud_399im_100e.h5", compile=False)
+	model = keras.models.load_model(f"models/cloud_399im_100e.h5", compile=False)
 
 	print("Applying model to patches...")
 	for patch_file in sorted(glob.glob(patches_folder+"*.png"), key=get_order):
@@ -91,6 +92,12 @@ def reconstruct_patch_results(block_results_folder):
 	reconstructed_image = unpatchify(patches, (3660, 3660))
 	reconstructed_image = Image.fromarray(np.uint8(reconstructed_image))
 	reconstructed_image.save(block_results_folder+"combined_result.png")
+
+
+
+#main testing
+if __name__ == "__main__":
+	model_on_patches(256, 256, "unet_results/HLS.S30.T19NHA.2021001T144731.v2.0/")
 
 
 

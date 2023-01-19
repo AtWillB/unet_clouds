@@ -17,7 +17,8 @@ import osgeo_utils.gdal_merge as merge
 from osgeo import gdal
 
 
-
+def contrast_shifting(x, min, max):
+    return (x - min)/(max - min)
 
 # Grab the bands from the specified block, and create a dictionary that stores the path to 
 # all of the blocks bands, and the blocks name.
@@ -46,8 +47,51 @@ def make_image(block_dict, band_names):
     for band in band_names:
         image_band_list.append(block_dict[band])
 
+
+    # B8A = gdal.Open(image_band_list[0])
+    # B11 = gdal.Open(image_band_list[1])
+    # B12 = gdal.Open(image_band_list[2])
+
+    # B8A = B8A.ReadAsArray()
+    # B11 = B11.ReadAsArray()
+    # B12 = B12.ReadAsArray()
+
+    # B8Amin = B8A.min()
+    # B8Amax = B8A.max()
+    # B11min = B11.min()
+    # B11max = B11.max()
+    # B12min = B12.min()
+    # B12max = B12.max()
+
+
+
+    # def contrast_shifting(x):
+    #     return int(((x - B8Amin)/(B8Amax - B8Amin))*255)
+    # vec = np.vectorize(contrast_shifting)
+
+    # def contrast_shifting1(x):
+    #     return int(((x - B11min)/(B11max - B11min))*255)
+    # vec1 = np.vectorize(contrast_shifting)
+
+    # def contrast_shifting2(x):
+    #     return int(((x - B12min)/(B12max - B12min))*255)
+    # vec2 = np.vectorize(contrast_shifting)
+
+    # B8A = vec(B8A)
+    # B11 = vec1(B11)
+    # B12 = vec2(B12)
+
+    # comp = np.dstack((B8A, B11, B12))
+
+ 
+    # plt.imshow(comp)
+    # plt.show()
+    #exit()
+
+
+
     print(f"Merging {band_names} from {block_dict['block_name']}: ")
-    parameters = ['', '-o', results_path+"/merged.tiff"] + image_band_list + ['-separate']
+    parameters = ['', '-o', results_path+"/merged.tiff"] + image_band_list + ['-separate', "--help-general"]
     merge.main(parameters)
     print("\n")
 
@@ -63,12 +107,18 @@ def patchify_image(results_path):
         os.mkdir(patches_folder)
 
 
-    ds = gdal.Open(results_path+"merged.tiff")
-    gdal.Translate(results_path+"merged.png", ds, format = "PNG", outputType = gdal.GDT_UInt16)
-    png_path = results_path+"merged.png"
+    # ds = gdal.Open(results_path+"merged.tiff")
+    # #[ STATS ] =  Minimum=1.000, Maximum=4.000, Mean=1.886, StdDev=0.797
+    # stats = gdal.Info(ds)
 
+    png_path = results_path+"merged.png"
+    os.system(f"gdal_translate -of PNG -scale {results_path}"+f"merged.tiff {png_path}")
+    
     img = Image.open(png_path)
     img = np.asarray(img)
+
+
+
     patches = patchify(img, (244, 244, 3), step=244)
 
     for i in range(patches.shape[0]):
@@ -83,8 +133,23 @@ def patchify_image(results_path):
 
 
 ### main
-block_path = "/Users/willbyrne/Documents/Code/GLAD/unet_cloud/data/hls_2021_data/s30/HLS.S30.T19NHA.2021001T144731.v2.0/"
+block_path = "/Users/willbyrne/Documents/work/code/glad/unet_clouds/data/hls_2021_data/s30/HLS.S30.T19NHA.2021001T144731.v2.0/"
 block_results_folder = "unet_results/HLS.S30.T19NHA.2021001T144731.v2.0/"
+block_dict = {'block_name': 'HLS.S30.T19NHA.2021001T144731.v2.0', 
+'B09': '/Users/willbyrne/Documents/work/code/glad/unet_clouds/data/hls_2021_data/s30/HLS.S30.T19NHA.2021001T144731.v2.0/HLS.S30.T19NHA.2021001T144731.v2.0.B09.tif', 
+'B08': '/Users/willbyrne/Documents/work/code/glad/unet_clouds/data/hls_2021_data/s30/HLS.S30.T19NHA.2021001T144731.v2.0/HLS.S30.T19NHA.2021001T144731.v2.0.B08.tif', 
+'B8A': '/Users/willbyrne/Documents/work/code/glad/unet_clouds/data/hls_2021_data/s30/HLS.S30.T19NHA.2021001T144731.v2.0/HLS.S30.T19NHA.2021001T144731.v2.0.B8A.tif', 
+'B01': '/Users/willbyrne/Documents/work/code/glad/unet_clouds/data/hls_2021_data/s30/HLS.S30.T19NHA.2021001T144731.v2.0/HLS.S30.T19NHA.2021001T144731.v2.0.B01.tif', 
+'B03': '/Users/willbyrne/Documents/work/code/glad/unet_clouds/data/hls_2021_data/s30/HLS.S30.T19NHA.2021001T144731.v2.0/HLS.S30.T19NHA.2021001T144731.v2.0.B03.tif', 
+'B02': '/Users/willbyrne/Documents/work/code/glad/unet_clouds/data/hls_2021_data/s30/HLS.S30.T19NHA.2021001T144731.v2.0/HLS.S30.T19NHA.2021001T144731.v2.0.B02.tif', 
+'B06': '/Users/willbyrne/Documents/work/code/glad/unet_clouds/data/hls_2021_data/s30/HLS.S30.T19NHA.2021001T144731.v2.0/HLS.S30.T19NHA.2021001T144731.v2.0.B06.tif', 
+'B12': '/Users/willbyrne/Documents/work/code/glad/unet_clouds/data/hls_2021_data/s30/HLS.S30.T19NHA.2021001T144731.v2.0/HLS.S30.T19NHA.2021001T144731.v2.0.B12.tif', 
+'B07': '/Users/willbyrne/Documents/work/code/glad/unet_clouds/data/hls_2021_data/s30/HLS.S30.T19NHA.2021001T144731.v2.0/HLS.S30.T19NHA.2021001T144731.v2.0.B07.tif', 
+'B11': '/Users/willbyrne/Documents/work/code/glad/unet_clouds/data/hls_2021_data/s30/HLS.S30.T19NHA.2021001T144731.v2.0/HLS.S30.T19NHA.2021001T144731.v2.0.B11.tif', 
+'B05': '/Users/willbyrne/Documents/work/code/glad/unet_clouds/data/hls_2021_data/s30/HLS.S30.T19NHA.2021001T144731.v2.0/HLS.S30.T19NHA.2021001T144731.v2.0.B05.tif', 
+'B04': '/Users/willbyrne/Documents/work/code/glad/unet_clouds/data/hls_2021_data/s30/HLS.S30.T19NHA.2021001T144731.v2.0/HLS.S30.T19NHA.2021001T144731.v2.0.B04.tif', 
+'B10': '/Users/willbyrne/Documents/work/code/glad/unet_clouds/data/hls_2021_data/s30/HLS.S30.T19NHA.2021001T144731.v2.0/HLS.S30.T19NHA.2021001T144731.v2.0.B10.tif'}
+
 
 
 if not os.path.exists('unet_results'):
