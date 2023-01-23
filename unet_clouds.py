@@ -13,12 +13,10 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 import glob
 import os
 
-import osgeo_utils.gdal_merge as merge
 from osgeo import gdal
 
 
-def contrast_shifting(x, min, max):
-    return (x - min)/(max - min)
+
 
 # Grab the bands from the specified block, and create a dictionary that stores the path to 
 # all of the blocks bands, and the blocks name.
@@ -26,7 +24,10 @@ def contrast_shifting(x, min, max):
 def get_bands(block_path):
     block_dict = {}
     block_name = block_path.split("/")[-2]
+    hls_type = block_name.split(".")[1]
+
     block_dict.update({"block_name": block_name})
+    block_dict.update({"hls_type": hls_type})
 
     for band in glob.glob(block_path+"*B[0-9][A-Z0-9].tif"):
         band_name = band.split(".")[-2]
@@ -48,51 +49,10 @@ def make_image(block_dict, band_names):
         image_band_list.append(block_dict[band])
 
 
-    # B8A = gdal.Open(image_band_list[0])
-    # B11 = gdal.Open(image_band_list[1])
-    # B12 = gdal.Open(image_band_list[2])
-
-    # B8A = B8A.ReadAsArray()
-    # B11 = B11.ReadAsArray()
-    # B12 = B12.ReadAsArray()
-
-    # B8Amin = B8A.min()
-    # B8Amax = B8A.max()
-    # B11min = B11.min()
-    # B11max = B11.max()
-    # B12min = B12.min()
-    # B12max = B12.max()
-
-
-
-    # def contrast_shifting(x):
-    #     return int(((x - B8Amin)/(B8Amax - B8Amin))*255)
-    # vec = np.vectorize(contrast_shifting)
-
-    # def contrast_shifting1(x):
-    #     return int(((x - B11min)/(B11max - B11min))*255)
-    # vec1 = np.vectorize(contrast_shifting)
-
-    # def contrast_shifting2(x):
-    #     return int(((x - B12min)/(B12max - B12min))*255)
-    # vec2 = np.vectorize(contrast_shifting)
-
-    # B8A = vec(B8A)
-    # B11 = vec1(B11)
-    # B12 = vec2(B12)
-
-    # comp = np.dstack((B8A, B11, B12))
-
- 
-    # plt.imshow(comp)
-    # plt.show()
-    #exit()
-
-
-
     print(f"Merging {band_names} from {block_dict['block_name']}: ")
-    parameters = ['', '-o', results_path+"/merged.tiff"] + image_band_list + ['-separate', "--help-general"]
-    merge.main(parameters)
+
+
+    os.system('gdal_merge.py -o '+results_path+"merged.tiff " + image_band_list[0]+" "+image_band_list[1]+" "+image_band_list[2]+' -separate')
     print("\n")
 
     return results_path
@@ -106,18 +66,11 @@ def patchify_image(results_path):
     if not os.path.exists(patches_folder):
         os.mkdir(patches_folder)
 
-
-    # ds = gdal.Open(results_path+"merged.tiff")
-    # #[ STATS ] =  Minimum=1.000, Maximum=4.000, Mean=1.886, StdDev=0.797
-    # stats = gdal.Info(ds)
-
     png_path = results_path+"merged.png"
     os.system(f"gdal_translate -of PNG -scale {results_path}"+f"merged.tiff {png_path}")
     
     img = Image.open(png_path)
     img = np.asarray(img)
-
-
 
     patches = patchify(img, (244, 244, 3), step=244)
 
@@ -152,86 +105,18 @@ block_dict = {'block_name': 'HLS.S30.T19NHA.2021001T144731.v2.0',
 
 
 
-if not os.path.exists('unet_results'):
-    os.mkdir('unet_results')
+for block_path in glob.glob("/Users/willbyrne/Documents/work/code/glad/unet_clouds/data/hls_2021_data/**/*.v2.0/", recursive=True):
+    if not os.path.exists('unet_results'):
+        os.mkdir('unet_results')
 
-block_dict = get_bands(block_path)
+    block_dict = get_bands(block_path)
+    if block_dict['hls_type'] == "S30":
+        block_results_folder = make_image(block_dict, ["B8A", 'B11', 'B12'])
+    elif block_dict["hls_type"] == "L30":
+        block_results_folder = make_image(block_dict, ["B05", 'B06', 'B07'])
 
-block_results_folder = make_image(block_dict, ["B8A", 'B11', 'B12'])
+    patches_folder, patches = patchify_image(block_results_folder)
 
-patches_folder, patches = patchify_image(block_results_folder)
-
-mod_app.model_on_patches(256, 256, block_results_folder)
-
-mod_app.reconstruct_patch_results(block_results_folder)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# rgb_im = image.convert('RGB')
-
-# image = np.asarray(rgb_im)
-
-
-# patches = patchify(image, (244, 244, 3), step=244)
-# print(patches.shape)  # (6, 10, 1, 512, 512, 3)
-# print(type(patches))
-
-
-
-
-
-
-# for i in range(patches.shape[0]):
-#     for j in range(patches.shape[1]):
-#         patch = patches[i, j, 0]
-#         patch = Image.fromarray(patch)
-#         num = i * patches.shape[1] + j
-#         patch.save(f"/Users/willbyrne/Documents/CODE/GLAD/cloud_mask/data/blocks/HLS.S30.T19NHA.2021001T144731/fmask_fishnet/patch_{num}.png")
-
-# for i in range(0,31):
-#     img_num = rand.randrange(1,224,1)
-#     shutil.copy(f"./training/fishnet/patch_{img_num}.png", f"training/images/patch_{img_num}.png")
-
-
-
-
-
-# reconstructed_image = unpatchify(patches, (3660, 3660, 3))
-# reconstructed_image = Image.fromarray(reconstructed_image)
-# reconstructed_image.save("output.jpg")
-
-# for i in range(1,3660):
-# 	if 3660 % i == 0:
-# 		print(i)
-# 		if i > 200:
-# 			break
+    mod_app.model_on_patches(256, 256, block_results_folder)
+    mod_app.reconstruct_patch_results(block_results_folder)
+    print(f"\n*****\nCOMPLETED {block_dict['block_name']}\n*****\n")
